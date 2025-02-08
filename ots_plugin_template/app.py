@@ -1,4 +1,5 @@
 import os
+import traceback
 
 import yaml
 from flask import Blueprint, render_template, jsonify, Flask
@@ -15,12 +16,20 @@ class PluginTemplate(Plugin):
     def __init__(self):
         self._app: Flask | None = None
         self._config = {}
+        self._metadata = {}
+        self._name = ""
 
     def activate(self, app: Flask):
-        logger.info("Loaded Plugin Template")
         self._app = app
-        self._app.config.update({"OTS_PLUGIN_TEMPLATE_TEST": "Hello World"})
         self._load_config()
+        self._load_metadata()
+
+        try:
+            # Do stuff here
+            logger.info(f"Successfully Loaded {self._name}")
+        except BaseException as e:
+            logger.error(f"Failed to load {self._name}: {e}")
+            logger.error(traceback.format_exc())
 
     # Loads default config and user config from ~/ots/config.yml
     # In most cases you don't need to change this
@@ -37,6 +46,29 @@ class PluginTemplate(Plugin):
                 value = yaml_config.get(key)
                 if value:
                     self._config[key] = value
+
+    def _load_metadata(self):
+        try:
+            distribution = None
+            distributions = importlib.metadata.packages_distributions()
+            logger.debug(distributions)
+            for distro in distributions:
+                if str(__name__).startswith(distro):
+                    distribution = distributions[distro][0]
+                    break
+
+            if distribution:
+                info = importlib.metadata.metadata(distribution)
+                self._metadata = info.json
+                self._name = self._metadata.get("Name") or self._metadata.get("name")
+            else:
+                logger.error("Failed to get plugin name")
+        except BaseException as e:
+            logger.error(e)
+
+    def stop(self):
+        # Shut down your plugin gracefully here
+        pass
 
     # Make route methods static to avoid "no-self-use" errors
     @staticmethod
