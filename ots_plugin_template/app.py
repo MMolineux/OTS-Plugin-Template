@@ -46,21 +46,15 @@ class PluginTemplate(Plugin):
 
     def _load_metadata(self):
         try:
-            distribution = None
             distributions = importlib.metadata.packages_distributions()
-            logger.debug(distributions)
             for distro in distributions:
                 if str(__name__).startswith(distro):
-                    distribution = distributions[distro][0]
+                    self._name = distributions[distro][0]
+                    self._distro = distro
+                    info = importlib.metadata.metadata(self._distro)
+                    self._metadata = info.json
                     break
 
-            if distribution:
-                info = importlib.metadata.metadata(distribution)
-                self._metadata = info.json
-                logger.warning(self._metadata)
-                self._name = self._metadata.get("Name") or self._metadata.get("name")
-            else:
-                logger.error("Failed to get plugin name")
         except BaseException as e:
             logger.error(e)
 
