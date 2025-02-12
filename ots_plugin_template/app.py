@@ -1,23 +1,20 @@
 import os
+import pathlib
 import traceback
 
 import yaml
 from flask import Blueprint, render_template, jsonify, Flask
 from opentakserver.plugins.Plugin import Plugin
 from opentakserver.extensions import *
+
 from .default_config import DefaultConfig
 import importlib.metadata
 
 
 class PluginTemplate(Plugin):
-    # Use a URL prefix of "/api/your_plugin_name" and change the Blueprint name to YourPluginBlueprint
-    blueprint = Blueprint("PluginTemplateBlueprint", __name__, url_prefix="/api/plugins/plugin_template", template_folder="templates")
-
-    def __init__(self):
-        self._app: Flask | None = None
-        self._config = {}
-        self._metadata = {}
-        self._name = ""
+    # Change the Blueprint name to YourPluginBlueprint
+    url_prefix = f"/api/plugins/{pathlib.Path(__file__).resolve().parent.name}"
+    blueprint = Blueprint("PluginTemplate", __name__, url_prefix=url_prefix, template_folder="templates")
 
     def activate(self, app: Flask):
         self._app = app
@@ -60,11 +57,17 @@ class PluginTemplate(Plugin):
             if distribution:
                 info = importlib.metadata.metadata(distribution)
                 self._metadata = info.json
+                logger.warning(self._metadata)
                 self._name = self._metadata.get("Name") or self._metadata.get("name")
             else:
                 logger.error("Failed to get plugin name")
         except BaseException as e:
             logger.error(e)
+
+    def get_info(self):
+        self._load_metadata()
+        self.get_plugin_routes(self.url_prefix)
+        return {'name': self._name, 'distro': self._distro, 'routes': self._routes}
 
     def stop(self):
         # Shut down your plugin gracefully here
@@ -93,8 +96,11 @@ class PluginTemplate(Plugin):
             return jsonify({'success': False, 'error': e}), 500
 
     # OpenTAKServer's web UI will call your plugin's /ui endpoint and display the results
+    # Delete this if your plugin doesn't require a UI
     @staticmethod
     @blueprint.route("/ui")
     def ui():
         return render_template("index.html")
 
+    # Add more routes here. Make sure to use try/except blocks around all of your code. Otherwise, an exception in a plugin
+    # could cause the whole server to crash
