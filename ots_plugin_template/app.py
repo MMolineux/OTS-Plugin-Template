@@ -3,7 +3,7 @@ import pathlib
 import traceback
 
 import yaml
-from flask import Blueprint, render_template, jsonify, Flask
+from flask import Blueprint, render_template, jsonify, Flask, current_app as app, send_from_directory
 from opentakserver.plugins.Plugin import Plugin
 from opentakserver.extensions import *
 
@@ -12,10 +12,14 @@ import importlib.metadata
 
 
 class PluginTemplate(Plugin):
-    # Change the Blueprint name to YourPluginBlueprint
+    # Do not change url_prefix
     url_prefix = f"/api/plugins/{pathlib.Path(__file__).resolve().parent.name}"
-    blueprint = Blueprint("PluginTemplate", __name__, url_prefix=url_prefix, template_folder="templates")
+    blueprint = Blueprint("PluginTemplate", __name__, url_prefix=url_prefix)
+                                       #^
+                                       #|
+                            # Change this to your plugin's name
 
+    # This is your plugin's entry point. It will be called from OpenTAKServer to start the plugin
     def activate(self, app: Flask):
         self._app = app
         self._load_config()
@@ -31,10 +35,11 @@ class PluginTemplate(Plugin):
     # Loads default config and user config from ~/ots/config.yml
     # In most cases you don't need to change this
     def _load_config(self):
-        # Gets default config key/value pairs from default_config.py
+        # Gets default config key/value pairs from the plugin's default_config.py
         for key in dir(DefaultConfig):
             if key.isupper():
                 self._config[key] = getattr(DefaultConfig, key)
+                self._app.config.update({key: getattr(DefaultConfig, key)})
 
         # Get user overrides from config.yml
         with open(os.path.join(self._app.config.get("OTS_DATA_FOLDER"), "config.yml")) as yaml_file:
@@ -43,6 +48,7 @@ class PluginTemplate(Plugin):
                 value = yaml_config.get(key)
                 if value:
                     self._config[key] = value
+                    self._app.config.update({key: value})
 
     def _load_metadata(self):
         try:
@@ -72,6 +78,7 @@ class PluginTemplate(Plugin):
     @blueprint.route("/")
     def plugin_info():  # Do not put "self" as a method parameter here
         # This method will return JSON with info about the plugin derived from pyproject.toml, please do not change it
+        # Make sure that your plugin has a README.md to show in the UI's about page
         try:
             distribution = None
             distributions = importlib.metadata.packages_distributions()
@@ -89,12 +96,15 @@ class PluginTemplate(Plugin):
             logger.error(e)
             return jsonify({'success': False, 'error': e}), 500
 
-    # OpenTAKServer's web UI will call your plugin's /ui endpoint and display the results
-    # Delete this if your plugin doesn't require a UI
+    # OpenTAKServer's web UI will display your plugin's UI in an iframe
     @staticmethod
     @blueprint.route("/ui")
     def ui():
-        return render_template("index.html")
+        # Uncomment the following line if your plugin does not require a UI
+        # return send_from_directory(f"../{pathlib.Path(__file__).resolve().parent.name}/dist", "index.html", as_attachment=False)
+
+        # Otherwise use this line if your plugin requires a UI
+        return send_from_directory(f"../{pathlib.Path(__file__).resolve().parent.name}/dist", "index.html", as_attachment=False)
 
     # Add more routes here. Make sure to use try/except blocks around all of your code. Otherwise, an exception in a plugin
     # could cause the whole server to crash
