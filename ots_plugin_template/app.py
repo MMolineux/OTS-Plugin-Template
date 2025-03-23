@@ -3,7 +3,8 @@ import pathlib
 import traceback
 
 import yaml
-from flask import Blueprint, render_template, jsonify, Flask, current_app as app, send_from_directory
+from flask import Blueprint, render_template, jsonify, Flask, current_app as app, send_from_directory, request
+from flask_security import roles_accepted
 from opentakserver.plugins.Plugin import Plugin
 from opentakserver.extensions import *
 
@@ -21,9 +22,10 @@ class PluginTemplate(Plugin):
 
     # This is your plugin's entry point. It will be called from OpenTAKServer to start the plugin
     def activate(self, app: Flask):
+        # Do not change these three lines
         self._app = app
         self._load_config()
-        self._load_metadata()
+        self.load_metadata()
 
         try:
             # Do stuff here
@@ -32,8 +34,23 @@ class PluginTemplate(Plugin):
             logger.error(f"Failed to load {self._name}: {e}")
             logger.error(traceback.format_exc())
 
+    # Do not change this
+    def load_metadata(self):
+        try:
+            distributions = importlib.metadata.packages_distributions()
+            for distro in distributions:
+                if str(__name__).startswith(distro):
+                    self.name = distributions[distro][0]
+                    self.distro = distro
+                    info = importlib.metadata.metadata(self.distro)
+                    self._metadata = info.json
+                    break
+
+        except BaseException as e:
+            logger.error(e)
+
     # Loads default config and user config from ~/ots/config.yml
-    # In most cases you don't need to change this
+    # Do not change
     def _load_config(self):
         # Gets default config key/value pairs from the plugin's default_config.py
         for key in dir(DefaultConfig):
@@ -50,22 +67,8 @@ class PluginTemplate(Plugin):
                     self._config[key] = value
                     self._app.config.update({key: value})
 
-    def _load_metadata(self):
-        try:
-            distributions = importlib.metadata.packages_distributions()
-            for distro in distributions:
-                if str(__name__).startswith(distro):
-                    self._name = distributions[distro][0]
-                    self._distro = distro
-                    info = importlib.metadata.metadata(self._distro)
-                    self._metadata = info.json
-                    break
-
-        except BaseException as e:
-            logger.error(e)
-
     def get_info(self):
-        self._load_metadata()
+        self.load_metadata()
         self.get_plugin_routes(self.url_prefix)
         return {'name': self._name, 'distro': self._distro, 'routes': self._routes}
 
@@ -75,6 +78,7 @@ class PluginTemplate(Plugin):
 
     # Make route methods static to avoid "no-self-use" errors
     @staticmethod
+    @roles_accepted("administrator")
     @blueprint.route("/")
     def plugin_info():  # Do not put "self" as a method parameter here
         # This method will return JSON with info about the plugin derived from pyproject.toml, please do not change it
@@ -98,13 +102,59 @@ class PluginTemplate(Plugin):
 
     # OpenTAKServer's web UI will display your plugin's UI in an iframe
     @staticmethod
+    @roles_accepted("administrator")
     @blueprint.route("/ui")
     def ui():
         # Uncomment the following line if your plugin does not require a UI
-        # return send_from_directory(f"../{pathlib.Path(__file__).resolve().parent.name}/dist", "index.html", as_attachment=False)
+        # return '', 200
 
         # Otherwise use this line if your plugin requires a UI
         return send_from_directory(f"../{pathlib.Path(__file__).resolve().parent.name}/dist", "index.html", as_attachment=False)
 
+    # Endpoint to serve static UI files
+    @staticmethod
+    @roles_accepted("administrator")
+    @blueprint.route('/assets/<file_name>')
+    def serve(file_name):
+        logger.debug(f"Path: {file_name}")
+        dist = f"../{pathlib.Path(__file__).parent.resolve().name}/dist/assets"
+        logger.warning(os.path.join(pathlib.Path(__file__).parent.resolve(), "dist", "assets", file_name))
+        if file_name != "" and os.path.exists(
+                os.path.join(pathlib.Path(__file__).parent.resolve(), "dist", "assets", file_name)):
+            logger.info(f"Serving {file_name}")
+            return send_from_directory(dist, file_name)
+        else:
+            return send_from_directory(dist, 'index.html')
+
+    # Gets the plugin config for the web UI, do not change
+    @staticmethod
+    @roles_accepted("administrator")
+    @blueprint.route("/config")
+    def config():
+        config = {}
+
+        for key in dir(DefaultConfig):
+            if key.isupper():
+                config[key] = app.config.get(key)
+
+        return jsonify(config)
+
+    # Updates the plugin config
+    @staticmethod
+    @roles_accepted("administrator")
+    @blueprint.route("/config", methods=["POST"])
+    def update_config():
+        try:
+            result = DefaultConfig.update_config(request.json)
+            if result["success"]:
+                DefaultConfig.update_config(request.json)
+                return jsonify(result)
+            else:
+                return jsonify(result), 400
+        except BaseException as e:
+            logger.error("Failed to update config:" + str(e))
+            logger.error(traceback.format_exc())
+            return jsonify({"success": False, "error": str(e)}), 400
+
     # Add more routes here. Make sure to use try/except blocks around all of your code. Otherwise, an exception in a plugin
-    # could cause the whole server to crash
+    # could cause the whole server to crash. Also make sure to properly protect your routes with @auth_required or @roles_accepted
