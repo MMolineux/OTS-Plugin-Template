@@ -8,14 +8,14 @@ import yaml
 
 @dataclass
 class DefaultConfig:
-    # Config options go here in all caps with the name of your plugin first
+    # TODO: Config options go here in all caps with the name of your plugin first
     # This file will be loaded first, followed by user overrides from config.yml
     # Make sure not to duplicate any setting name in OpenTAKServers' defaultconfig.py
 
-    OTS_PLUGIN_TEMPLATE_ENABLED = True  # This setting is required. Rename it with your plugin's name
+    OTS_PLUGIN_TEMPLATE_ENABLED = True  # TODO: This setting is required. Rename it with your plugin's name
     OTS_PLUGIN_TEMPLATE_SOME_SETTING = "my_setting_value"
 
-    # Use this method to validate config values input by the user in the OTS web UI
+    # TODO: Use this method to validate config values input by the user in the OTS web UI
     # Make sure the return dict is {"success": bool, "error", "Some error message or blank if no errors"}
     @staticmethod
     def validate(config: dict) -> dict[str, bool | str]:

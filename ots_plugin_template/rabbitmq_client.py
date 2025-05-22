@@ -5,7 +5,7 @@ from flask import Flask
 from opentakserver.extensions import logger
 import pika
 
-# Use this class to connect to the OTS server's RabbitMQ instance to publish and consume data.
+# TODO: Use this class to connect to the OTS server's RabbitMQ instance to publish and consume data.
 # See https://github.com/brian7704/OTS-AISStream-Plugin/blob/main/ots_aisstream_plugin/WebsocketWrapper.py for an example
 
 

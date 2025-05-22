@@ -2,8 +2,8 @@ import datetime
 from xml.etree.ElementTree import Element, SubElement
 from opentakserver.functions import iso8601_string_from_datetime
 
-# Use these functions to generate XML CoT messages. See https://github.com/brian7704/OTS-AISStream-Plugin/blob/0db5eda098cb7618c65cc43687cdddbfa362bdbe/ots_aisstream_plugin/WebsocketWrapper.py#L93
-# for an example
+# Use these functions to generate XML CoT messages.
+# See https://github.com/brian7704/OTS-AISStream-Plugin/blob/0db5eda098cb7618c65cc43687cdddbfa362bdbe/ots_aisstream_plugin/WebsocketWrapper.py#L93 for an example
 
 UNKNOWN = "9999999.0"
 

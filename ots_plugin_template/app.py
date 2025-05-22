@@ -12,13 +12,14 @@ from .default_config import DefaultConfig
 import importlib.metadata
 
 
+# TODO: Rename this class
 class PluginTemplate(Plugin):
     # Do not change url_prefix
     url_prefix = f"/api/plugins/{pathlib.Path(__file__).resolve().parent.name}"
     blueprint = Blueprint("PluginTemplate", __name__, url_prefix=url_prefix)
                                        #^
                                        #|
-                            # Change this to your plugin's name
+                            # TODO: Change this to your plugin's name
 
     # This is your plugin's entry point. It will be called from OpenTAKServer to start the plugin
     def activate(self, app: Flask):
@@ -28,7 +29,8 @@ class PluginTemplate(Plugin):
         self.load_metadata()
 
         try:
-            # Do stuff here
+            # TODO: If your plugin needs to run in the background, do that here.
+            # See OTS-AISStream-Plugin for an example
             logger.info(f"Successfully Loaded {self._name}")
         except BaseException as e:
             logger.error(f"Failed to load {self._name}: {e}")
@@ -44,7 +46,7 @@ class PluginTemplate(Plugin):
                     self.distro = distro
                     info = importlib.metadata.metadata(self.distro)
                     self._metadata = info.json
-                    break
+                    return info.json
 
         except BaseException as e:
             logger.error(e)
@@ -70,10 +72,11 @@ class PluginTemplate(Plugin):
     def get_info(self):
         self.load_metadata()
         self.get_plugin_routes(self.url_prefix)
-        return {'name': self._name, 'distro': self._distro, 'routes': self._routes}
+        return {'name': self.name, 'distro': self.distro, 'routes': self.routes}
 
     def stop(self):
-        # Shut down your plugin gracefully here
+        # TODO: If your plugin runs in the background, shut down your plugin gracefully here
+        # See OTS-AISStream-Plugin for an example
         pass
 
     # Make route methods static to avoid "no-self-use" errors
@@ -105,26 +108,28 @@ class PluginTemplate(Plugin):
     @roles_accepted("administrator")
     @blueprint.route("/ui")
     def ui():
-        # Uncomment the following line if your plugin does not require a UI
+        # TODO: Uncomment the following line if your plugin does not require a UI
         # return '', 200
 
-        # Otherwise use this line if your plugin requires a UI
-        return send_from_directory(f"../{pathlib.Path(__file__).resolve().parent.name}/dist", "index.html", as_attachment=False)
+        # TODO: Otherwise use this line if your plugin requires a UI
+        return send_from_directory(f"../{pathlib.Path(__file__).parent.resolve().name}/ui", "index.html", as_attachment=False)
 
-    # Endpoint to serve static UI files
+    # Endpoint to serve static UI files. Does not need to be changed in most cases
     @staticmethod
     @roles_accepted("administrator")
     @blueprint.route('/assets/<file_name>')
+    @blueprint.route("/ui/<file_name>")
     def serve(file_name):
         logger.debug(f"Path: {file_name}")
-        dist = f"../{pathlib.Path(__file__).parent.resolve().name}/dist/assets"
-        logger.warning(os.path.join(pathlib.Path(__file__).parent.resolve(), "dist", "assets", file_name))
+        logger.warning(os.path.join(pathlib.Path(__file__).parent.resolve(), "ui", "assets", file_name))
         if file_name != "" and os.path.exists(
-                os.path.join(pathlib.Path(__file__).parent.resolve(), "dist", "assets", file_name)):
+                os.path.join(pathlib.Path(__file__).parent.resolve(), "ui", "assets", file_name)):
             logger.info(f"Serving {file_name}")
-            return send_from_directory(dist, file_name)
+            return send_from_directory(f"../{pathlib.Path(__file__).parent.resolve().name}/ui/assets", file_name)
+        elif file_name != "" and os.path.exists(os.path.join(pathlib.Path(__file__).parent.resolve(), "ui", file_name)):
+            return send_from_directory(f"../{pathlib.Path(__file__).parent.resolve().name}/ui", file_name)
         else:
-            return send_from_directory(dist, 'index.html')
+            return '', 404
 
     # Gets the plugin config for the web UI, do not change
     @staticmethod
@@ -156,5 +161,5 @@ class PluginTemplate(Plugin):
             logger.error(traceback.format_exc())
             return jsonify({"success": False, "error": str(e)}), 400
 
-    # Add more routes here. Make sure to use try/except blocks around all of your code. Otherwise, an exception in a plugin
+    # TODO: Add more routes here. Make sure to use try/except blocks around all of your code. Otherwise, an exception in a plugin
     # could cause the whole server to crash. Also make sure to properly protect your routes with @auth_required or @roles_accepted
