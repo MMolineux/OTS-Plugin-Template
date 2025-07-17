@@ -14,8 +14,9 @@ import importlib.metadata
 
 # TODO: Rename this class
 class PluginTemplate(Plugin):
-    # Do not change url_prefix
-    url_prefix = f"/api/plugins/{pathlib.Path(__file__).resolve().parent.name}"
+    # TODO: Change the Blueprint name to YourPluginBlueprint
+    metadata = importlib.metadata.metadata(pathlib.Path(__file__).resolve().parent.name)
+    url_prefix = f"/api/plugins/{metadata['Name'].lower()}"
     blueprint = Blueprint("PluginTemplate", __name__, url_prefix=url_prefix)
                                        #^
                                        #|

@@ -16,15 +16,16 @@ class DefaultConfig:
     OTS_PLUGIN_TEMPLATE_SOME_SETTING = "my_setting_value"
 
     # TODO: Use this method to validate config values input by the user in the OTS web UI
-    # Make sure the return dict is {"success": bool, "error", "Some error message or blank if no errors"}
+    # Make sure the return dict is {"success": False, "error", "Some helpful error message"} if the input is invalid,
+    # or {"success": True, "error": ""} if the input is valid
     @staticmethod
     def validate(config: dict) -> dict[str, bool | str]:
         try:
             for key, value in config.items():
                 if key not in DefaultConfig.__dict__.keys():
-                    return {"success": False, "error": f"{key} is not a valid config key"}
+                    return {"success": False, "error": f"{key} is not a valid config key"}, 400
                 elif key == "OTS_PLUGIN_TEMPLATE_SOME_SETTING" and type(key) is not str:
-                    return {"success": False, "error": f"{key} should be a string"}
+                    return {"success": False, "error": f"{key} should be a string"}, 400
 
             return {"success": True, "error": ""}
         except BaseException as e:
