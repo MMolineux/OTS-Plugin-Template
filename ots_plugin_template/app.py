@@ -40,17 +40,15 @@ class PluginTemplate(Plugin):
     # Do not change this
     def load_metadata(self):
         try:
-            distributions = importlib.metadata.packages_distributions()
-            for distro in distributions:
-                if str(__name__).startswith(distro):
-                    self.name = distributions[distro][0]
-                    self.distro = distro
-                    info = importlib.metadata.metadata(self.distro)
-                    self._metadata = info.json
-                    return info.json
-
+            self.distro = pathlib.Path(__file__).resolve().parent.name
+            self.metadata = importlib.metadata.metadata(self.distro).json
+            self.name = self.metadata['name']
+            self.metadata['distro'] = self.distro
+            return self.metadata
         except BaseException as e:
             logger.error(e)
+            logger.debug(traceback.format_exc())
+            return None
 
     # Loads default config and user config from ~/ots/config.yml
     # Do not change
