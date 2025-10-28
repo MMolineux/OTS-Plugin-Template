@@ -23,7 +23,7 @@ class PluginTemplate(Plugin):
                             # TODO: Change this to your plugin's name
 
     # This is your plugin's entry point. It will be called from OpenTAKServer to start the plugin
-    def activate(self, app: Flask):
+    def activate(self, app: Flask,enabled: bool = True):
         # Do not change these three lines
         self._app = app
         self._load_config()
@@ -32,9 +32,9 @@ class PluginTemplate(Plugin):
         try:
             # TODO: If your plugin needs to run in the background, do that here.
             # See OTS-AISStream-Plugin for an example
-            logger.info(f"Successfully Loaded {self._name}")
+            logger.info(f"Successfully Loaded {self.name}")
         except BaseException as e:
-            logger.error(f"Failed to load {self._name}: {e}")
+            logger.error(f"Failed to load {self.name}: {e}")
             logger.error(traceback.format_exc())
 
     # Do not change this
